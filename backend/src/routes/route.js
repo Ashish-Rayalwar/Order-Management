@@ -14,5 +14,9 @@ router.post("/orders",verifyToken,createOrder)
 router.get("/customers/:customerId", verifyTokenAndAuthorization,getCustomerById)
 router.get("/orders/:orderId",verifyToken,getOrders)
 
+router.all("/*",(req,res)=>{
+    console.log("Plz enter valid route, orderManagement");
+    res.status(400).send({msg:"invalid route"})
+})
 
 module.exports = router
