@@ -3,6 +3,7 @@ const { isvalidName, isvalidEmail, isvalidpassword, isvalidMobileNumber, isvalid
 // const validator = require("validator")
 const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
+const orderModel = require("../models/orderModel")
 
 
 const createCustomers = async(req,res)=>{
@@ -54,16 +55,16 @@ const loginCustomer = async(req,res)=>{
 
     let findUser = await customerModel.findOne({email:email}) 
     if(!findUser) return res.status(400).send({status:false,message:"user not exist with this email."})
-    let userId = findUser._id
+    let customerId = findUser._id
     let hashPassword = findUser.password
  
     let checkPassword = await bcrypt.compare(password,hashPassword)
 
     if(!checkPassword) return res.status(400).send({status:false,message:"given password is invalid"})
 
-    let token  = jwt.sign({userId:userId},"bonus-project-orderMangement",{expiresIn:86400})
+    let token  = jwt.sign({customerId:customerId},process.env.jwt_secretKey,{expiresIn:86400})
 
-    res.status(200).send({status:true,message:"Success",toke:token,userId:userId})
+    res.status(200).send({status:true,message:"Success",toke:token,customerId:customerId})
     
 
 }
@@ -73,13 +74,21 @@ const loginCustomer = async(req,res)=>{
 const getCustomerById = async(req,res)=>{
     try {
         let customerId = req.params.customerId
+      
     if(!customerId) return res.status(400).send({status:false,message:"enter your id for getting profile details "})
     
     if(!isvaliduserId(customerId)) return res.status(400).send({status:false,message:"Invalid Id "})
 
     let findCustomer = await customerModel.findOne({_id:customerId}) 
     if(!findCustomer) return res.status(404).send({status:false,message:"customer not found "})
-    return res.status(200).send({status:true,message:"Success",data:findCustomer})
+
+    let findOrders = await orderModel.find({customerId:customerId}).select({__v:0})
+    let sendData = {
+        Profile : findCustomer,
+        yourOrders : findOrders
+    }
+ 
+    return res.status(200).send({status:true,message:"Success",data:sendData})
 
 } catch (error) {
 

@@ -1,10 +1,16 @@
-const { isValidObjectId } = require("mongoose");
+const { isValidObjectId, default: mongoose } = require("mongoose");
 const customerModel = require("../models/customerModel");
 const { findOneAndUpdate } = require("../models/orderModel");
 const orderModel = require("../models/orderModel");
 const { isValidTitle, isvalidRating } = require("../validator");
 
+const sgMail = require("@sendgrid/mail")
 
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+
+
+require("dotenv").config()
 const createOrder = async(req,res)=>{
 
     let data = req.body
@@ -28,6 +34,10 @@ const createOrder = async(req,res)=>{
     let createOrder = await orderModel.create(orderDetails)
     let updateOrder = await customerModel.findOneAndUpdate({_id:customerId},{$inc:{orders:1}})
     let customerOrder = await customerModel.findOne({_id:customerId})
+    if(!customerOrder) return res.status(400).send({status:false,message:"Invalid CustomerId"})
+
+   
+
 
     let ordersCount = customerOrder.orders
     let goldDiscount = (price * 10) / 100 + customerOrder.wallet
@@ -44,11 +54,63 @@ const createOrder = async(req,res)=>{
     }
 
   let {discount,...otherData} = createOrder._doc
-    console.log("asd")
+
+
+
+  let email = customerOrder.email
+ 
+   
+
+  const sendEmail = async () => {
+  const msgConfig = {
+    
+    to: `${email}`,
+    from: process.env.EMAIL_FROM,
+    
+    subject: "Sendgrind test mail",
+    text: "This is a test mail from nodejs using sendgrid",
+    
+    
+}
+try {
+  await sgMail.send(msgConfig)
+  console.log("Email Sent to: ", msgConfig.to)
+  
+} catch (error) {
+  
+  console.log(error.message)
+}
+
+
+
+  }
+  sendEmail()
+
+
+  
+  
     return res.status(201).send({status:true,message:"Success",data:otherData})
     
 
 
 }
 
-module.exports = {createOrder}
+
+
+const getOrders = async (req,res)=>{
+
+ 
+  let orderId = req.params.orderId
+  console.log(orderId)
+
+  if(!mongoose.isValidObjectId(orderId)) return res.status(400).send({status:false,message:"Invalid orderID"})
+
+  let getOrder = await orderModel.findOne({_id:orderId})
+console.log(getOrder)
+  if(!getOrder) return res.status(404).send({status:false,message:"Order not found"})
+  
+  return res.status(200).send({status:true,data:getOrder})
+
+
+}
+module.exports = {createOrder,getOrders}
